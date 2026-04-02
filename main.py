@@ -1,6 +1,6 @@
 # =========================
-# TRUE EMERGENT COOPERATIVE + DIVERSE AGENTIC AI SYSTEM
-# (Prevents collapse + enables specialization)
+# TASK-DRIVEN EMERGENT COOPERATIVE MULTI-AGENT SYSTEM
+# (Breaks symmetry + adds structure + enables real emergence)
 # =========================
 
 import torch
@@ -22,6 +22,7 @@ class Config:
     comm_dim = 64
     grad_clip = 1.0
     reg_weight = 1e-3
+    noise_scale = 0.01
 
 cfg = Config()
 
@@ -107,6 +108,19 @@ class MultiAgentSystem(nn.Module):
         self.loss_history = []
         self.div_history = []
 
+    def generate_structured_states(self):
+        base = torch.randn(cfg.num_agents, cfg.state_dim)
+
+        # Shared task direction
+        task_dir = F.normalize(self.goal, dim=0)
+        base += task_dir * 0.5
+
+        # Agent-specific bias (break symmetry)
+        bias = torch.randn(cfg.num_agents, cfg.state_dim) * 0.1
+        base += bias
+
+        return base
+
     def forward(self, states):
         comm_init = torch.zeros(cfg.num_agents, cfg.comm_dim)
         H = self.core(states, comm_init)
@@ -117,6 +131,9 @@ class MultiAgentSystem(nn.Module):
         adj = torch.ones(cfg.num_agents, cfg.num_agents) / cfg.num_agents
         H = self.gnn(H, adj)
 
+        # Symmetry breaking noise
+        H = H + torch.randn_like(H) * cfg.noise_scale
+
         H = F.normalize(H, dim=1)
 
         probs = self.policy(H)
@@ -125,7 +142,7 @@ class MultiAgentSystem(nn.Module):
         return H, probs, values
 
     def compute_loss(self, states, H, probs, values):
-        # Goal reward
+        # Goal reward (stronger)
         dist = torch.norm(states - self.goal, dim=1)
         dist_reward = -dist / (1.0 + dist)
 
@@ -133,18 +150,18 @@ class MultiAgentSystem(nn.Module):
         sim_matrix = torch.matmul(H, H.T)
         coop = torch.mean(sim_matrix)
 
-        # Diversity (ANTI-COLLAPSE)
+        # Diversity
         identity = torch.eye(cfg.num_agents)
         diversity = torch.mean((sim_matrix - identity)**2)
 
-        # Variance-based specialization
+        # Specialization
         variance = torch.var(H, dim=0).mean()
 
-        # FINAL reward (balanced)
-        rewards = dist_reward + 0.02 * coop - 0.05 * diversity + 0.05 * variance
+        # Balanced reward
+        rewards = 2.0 * dist_reward + 0.02 * coop - 0.05 * diversity + 0.05 * variance
 
-        # Losses
         value_loss = F.mse_loss(values.squeeze(), rewards.detach())
+
         entropy = -(probs * torch.log(probs + 1e-8)).sum(dim=1).mean()
         policy_loss = -rewards.mean() - 0.01 * entropy
 
@@ -155,7 +172,7 @@ class MultiAgentSystem(nn.Module):
         return total_loss, rewards.mean().item(), coop.item(), diversity.item()
 
     def step(self):
-        states = torch.randn(cfg.num_agents, cfg.state_dim)
+        states = self.generate_structured_states()
 
         H, probs, values = self.forward(states)
 
@@ -192,7 +209,7 @@ if __name__ == "__main__":
     plt.plot(system.div_history, label="Diversity")
     plt.plot(system.loss_history, label="Loss")
     plt.legend()
-    plt.title("Emergent Cooperative Intelligence with Diversity")
+    plt.title("True Emergent Cooperative Intelligence")
     plt.xlabel("Steps")
     plt.ylabel("Metrics")
     plt.show()
@@ -200,5 +217,4 @@ if __name__ == "__main__":
 # =========================
 # README.md
 # =========================
-
 
