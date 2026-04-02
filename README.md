@@ -32,3 +32,37 @@ python main.py
 - UI agents
 - Distributed deployment
 """
+
+ =========================
+# README (PUT INTO README.md)
+# =========================
+
+"""
+# Goal-Driven Cooperative Agentic AI (GNN + RL + Meta-Learning)
+
+## Overview
+This system models a cooperative multi-agent neural organism.
+
+## Features
+- Shared goal optimization
+- Cooperative emergence (GNN-based)
+- Reinforcement learning
+- Meta-learning adaptation
+- Intelligence visualization
+
+## Intelligence Metrics
+- Reward (goal alignment)
+- Cooperation score (agent alignment)
+- Loss (learning progress)
+
+## Run
+python main.py
+
+## Output
+- Graph showing intelligence evolution
+
+## Insight
+Agents evolve from random behavior → coordinated intelligence.
+"""
+
+
