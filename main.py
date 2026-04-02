@@ -1,7 +1,6 @@
-        
-    # =========================
-# FULLY DIFFERENTIABLE COOPERATIVE AGENTIC AI SYSTEM
-# Single-file repo: main.py
+# =========================
+# STABLE FULLY DIFFERENTIABLE COOPERATIVE AGENTIC AI SYSTEM
+# (Fixed reward hacking + normalization + gradient stability)
 # =========================
 
 import torch
@@ -18,15 +17,17 @@ class Config:
     hidden_dim = 256
     action_dim = 10
     num_agents = 5
-    lr = 1e-3
+    lr = 5e-4
     gamma = 0.95
-    goal_scale = 5.0
+    goal_scale = 3.0
     comm_dim = 64
+    grad_clip = 1.0
+    reg_weight = 1e-3
 
 cfg = Config()
 
 # =========================
-# SHARED MODULES (GLOBAL BRAIN)
+# CORE MODULES
 # =========================
 
 class ReasoningCore(nn.Module):
@@ -34,6 +35,7 @@ class ReasoningCore(nn.Module):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(cfg.state_dim + cfg.comm_dim, cfg.hidden_dim),
+            nn.LayerNorm(cfg.hidden_dim),
             nn.ReLU(),
             nn.Linear(cfg.hidden_dim, cfg.hidden_dim)
         )
@@ -59,26 +61,22 @@ class Value(nn.Module):
         return self.net(x)
 
 # =========================
-# COMMUNICATION PROTOCOL (EMERGENT LANGUAGE)
+# COMMUNICATION (NORMALIZED)
 # =========================
 
 class CommunicationModule(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = nn.Linear(cfg.hidden_dim, cfg.comm_dim)
-        self.decoder = nn.Linear(cfg.comm_dim, cfg.hidden_dim)
 
     def forward(self, H):
-        # encode messages
         messages = self.encoder(H)
-        # global shared message (mean pooling)
+        messages = F.normalize(messages, dim=1)
         global_msg = messages.mean(dim=0, keepdim=True)
-        # broadcast back
-        comm = global_msg.repeat(cfg.num_agents, 1)
-        return comm
+        return global_msg.repeat(cfg.num_agents, 1)
 
 # =========================
-# GNN (DIFFERENTIABLE INTERACTION)
+# GNN
 # =========================
 
 class GNNLayer(nn.Module):
@@ -87,10 +85,12 @@ class GNNLayer(nn.Module):
         self.linear = nn.Linear(cfg.hidden_dim, cfg.hidden_dim)
 
     def forward(self, h, adj):
-        return F.relu(self.linear(torch.matmul(adj, h)))
+        h = torch.matmul(adj, h)
+        h = self.linear(h)
+        return F.relu(h)
 
 # =========================
-# FULL SYSTEM (JOINT LEARNING)
+# SYSTEM
 # =========================
 
 class MultiAgentSystem(nn.Module):
@@ -103,7 +103,7 @@ class MultiAgentSystem(nn.Module):
         self.comm = CommunicationModule()
         self.gnn = GNNLayer()
 
-        self.goal = torch.randn(cfg.state_dim) * cfg.goal_scale
+        self.goal = F.normalize(torch.randn(cfg.state_dim), dim=0) * cfg.goal_scale
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=cfg.lr)
 
@@ -112,40 +112,46 @@ class MultiAgentSystem(nn.Module):
         self.loss_history = []
 
     def forward(self, states):
-        # initial hidden states
         comm_init = torch.zeros(cfg.num_agents, cfg.comm_dim)
         H = self.core(states, comm_init)
 
-        # communication phase
         comm = self.comm(H)
-
-        # reasoning with communication
         H = self.core(states, comm)
 
-        # interaction phase
         adj = torch.ones(cfg.num_agents, cfg.num_agents) / cfg.num_agents
         H = self.gnn(H, adj)
 
-        # policy + value
+        # normalize hidden states (CRITICAL FIX)
+        H = F.normalize(H, dim=1)
+
         probs = self.policy(H)
         values = self.value(H)
 
         return H, probs, values
 
     def compute_loss(self, states, H, probs, values):
-        # cooperative reward
+        # bounded distance reward
         dist = torch.norm(states - self.goal, dim=1)
-        coop = torch.mean(torch.matmul(H, H.T))
-        rewards = -dist + 0.1 * coop
+        dist_reward = -dist / (1.0 + dist)
+
+        # normalized cooperation
+        coop_matrix = torch.matmul(H, H.T)
+        coop = torch.mean(coop_matrix)
+
+        rewards = dist_reward + 0.1 * coop
 
         # value loss
         value_loss = F.mse_loss(values.squeeze(), rewards.detach())
 
-        # policy loss (encourage actions aligned with reward)
+        # entropy for exploration
         entropy = -(probs * torch.log(probs + 1e-8)).sum(dim=1).mean()
+
         policy_loss = -rewards.mean() - 0.01 * entropy
 
-        total_loss = value_loss + policy_loss
+        # regularization to prevent explosion
+        reg = cfg.reg_weight * torch.mean(H**2)
+
+        total_loss = value_loss + policy_loss + reg
 
         return total_loss, rewards.mean().item(), coop.item()
 
@@ -158,6 +164,10 @@ class MultiAgentSystem(nn.Module):
 
         self.optimizer.zero_grad()
         loss.backward()
+
+        # gradient clipping (CRITICAL FIX)
+        torch.nn.utils.clip_grad_norm_(self.parameters(), cfg.grad_clip)
+
         self.optimizer.step()
 
         self.reward_history.append(avg_reward)
@@ -167,7 +177,7 @@ class MultiAgentSystem(nn.Module):
         return avg_reward, coop, loss.item()
 
 # =========================
-# TRAIN + VISUALIZE
+# TRAIN
 # =========================
 
 if __name__ == "__main__":
@@ -177,15 +187,14 @@ if __name__ == "__main__":
         reward, coop, loss = system.step()
 
         if step % 100 == 0:
-            print(f"Step {step} | Reward: {reward:.3f} | Coop: {coop:.3f} | Loss: {loss:.3f}")
+            print(f"Step {step} | Reward: {reward:.4f} | Coop: {coop:.4f} | Loss: {loss:.4f}")
 
-    # Visualization
     plt.figure()
     plt.plot(system.reward_history, label="Reward")
     plt.plot(system.coop_history, label="Cooperation")
     plt.plot(system.loss_history, label="Loss")
     plt.legend()
-    plt.title("Emergent Cooperative Intelligence")
+    plt.title("Stable Emergent Cooperative Intelligence")
     plt.xlabel("Steps")
     plt.ylabel("Metrics")
     plt.show()
