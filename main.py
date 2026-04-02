@@ -1,12 +1,12 @@
-# =========================
-# AGENTIC AI FULL SYSTEM (GOAL-DRIVEN + COOPERATIVE + VISUALIZATION)
-# Single-file repo
+        
+    # =========================
+# FULLY DIFFERENTIABLE COOPERATIVE AGENTIC AI SYSTEM
+# Single-file repo: main.py
 # =========================
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import random
 import matplotlib.pyplot as plt
 
 # =========================
@@ -18,48 +18,29 @@ class Config:
     hidden_dim = 256
     action_dim = 10
     num_agents = 5
-    memory_size = 200
     lr = 1e-3
     gamma = 0.95
     goal_scale = 5.0
+    comm_dim = 64
 
 cfg = Config()
 
 # =========================
-# MEMORY SYSTEM
-# =========================
-
-class Memory:
-    def __init__(self):
-        self.episodic = []
-
-    def store(self, transition):
-        self.episodic.append(transition)
-        if len(self.episodic) > cfg.memory_size:
-            self.episodic.pop(0)
-
-    def sample(self, batch_size=16):
-        return random.sample(self.episodic, min(len(self.episodic), batch_size))
-
-# =========================
-# REASONING CORE
+# SHARED MODULES (GLOBAL BRAIN)
 # =========================
 
 class ReasoningCore(nn.Module):
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(cfg.state_dim, cfg.hidden_dim),
+            nn.Linear(cfg.state_dim + cfg.comm_dim, cfg.hidden_dim),
             nn.ReLU(),
             nn.Linear(cfg.hidden_dim, cfg.hidden_dim)
         )
 
-    def forward(self, x):
+    def forward(self, x, comm):
+        x = torch.cat([x, comm], dim=-1)
         return self.net(x)
-
-# =========================
-# POLICY + VALUE
-# =========================
 
 class Policy(nn.Module):
     def __init__(self):
@@ -78,7 +59,26 @@ class Value(nn.Module):
         return self.net(x)
 
 # =========================
-# GNN LAYER (COOPERATION)
+# COMMUNICATION PROTOCOL (EMERGENT LANGUAGE)
+# =========================
+
+class CommunicationModule(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.encoder = nn.Linear(cfg.hidden_dim, cfg.comm_dim)
+        self.decoder = nn.Linear(cfg.comm_dim, cfg.hidden_dim)
+
+    def forward(self, H):
+        # encode messages
+        messages = self.encoder(H)
+        # global shared message (mean pooling)
+        global_msg = messages.mean(dim=0, keepdim=True)
+        # broadcast back
+        comm = global_msg.repeat(cfg.num_agents, 1)
+        return comm
+
+# =========================
+# GNN (DIFFERENTIABLE INTERACTION)
 # =========================
 
 class GNNLayer(nn.Module):
@@ -87,129 +87,84 @@ class GNNLayer(nn.Module):
         self.linear = nn.Linear(cfg.hidden_dim, cfg.hidden_dim)
 
     def forward(self, h, adj):
-        h_agg = torch.matmul(adj, h)
-        return F.relu(self.linear(h_agg))
+        return F.relu(self.linear(torch.matmul(adj, h)))
 
 # =========================
-# META-LEARNING
+# FULL SYSTEM (JOINT LEARNING)
 # =========================
 
-class MetaLearner:
-    def __init__(self, model):
-        self.model = model
-
-    def adapt(self, loss):
-        for p in self.model.parameters():
-            if p.grad is not None:
-                p.data -= cfg.lr * p.grad
-
-# =========================
-# AGENT
-# =========================
-
-class Agent:
+class MultiAgentSystem(nn.Module):
     def __init__(self):
-        self.memory = Memory()
+        super().__init__()
+
         self.core = ReasoningCore()
         self.policy = Policy()
         self.value = Value()
-        self.meta = MetaLearner(self.core)
-
-        self.optimizer = torch.optim.Adam(
-            list(self.core.parameters()) +
-            list(self.policy.parameters()) +
-            list(self.value.parameters()), lr=cfg.lr)
-
-    def act(self, state):
-        h = self.core(state)
-        probs = self.policy(h)
-        action = torch.multinomial(probs, 1)
-        return action, probs, h
-
-    def learn(self):
-        if len(self.memory.episodic) < 5:
-            return 0
-
-        batch = self.memory.sample()
-        loss = 0
-
-        for (s, a, r, s2) in batch:
-            h = self.core(s)
-            value = self.value(h)
-            target = r
-            loss += (value - target).pow(2).mean()
-
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        self.meta.adapt(loss)
-
-        return loss.item()
-
-# =========================
-# MULTI-AGENT SYSTEM
-# =========================
-
-class MultiAgentSystem:
-    def __init__(self):
-        self.agents = [Agent() for _ in range(cfg.num_agents)]
+        self.comm = CommunicationModule()
         self.gnn = GNNLayer()
 
-        # Shared goal (cooperative)
         self.goal = torch.randn(cfg.state_dim) * cfg.goal_scale
 
-        # Metrics
-        self.avg_rewards = []
-        self.avg_losses = []
-        self.cooperation_scores = []
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=cfg.lr)
 
-    def compute_reward(self, state, h_new):
-        # distance to shared goal
-        dist = torch.norm(state - self.goal)
-        coop = torch.norm(h_new.mean(dim=0))
+        self.reward_history = []
+        self.coop_history = []
+        self.loss_history = []
 
-        # reward encourages goal + cooperation
-        return -dist + 0.1 * coop
+    def forward(self, states):
+        # initial hidden states
+        comm_init = torch.zeros(cfg.num_agents, cfg.comm_dim)
+        H = self.core(states, comm_init)
+
+        # communication phase
+        comm = self.comm(H)
+
+        # reasoning with communication
+        H = self.core(states, comm)
+
+        # interaction phase
+        adj = torch.ones(cfg.num_agents, cfg.num_agents) / cfg.num_agents
+        H = self.gnn(H, adj)
+
+        # policy + value
+        probs = self.policy(H)
+        values = self.value(H)
+
+        return H, probs, values
+
+    def compute_loss(self, states, H, probs, values):
+        # cooperative reward
+        dist = torch.norm(states - self.goal, dim=1)
+        coop = torch.mean(torch.matmul(H, H.T))
+        rewards = -dist + 0.1 * coop
+
+        # value loss
+        value_loss = F.mse_loss(values.squeeze(), rewards.detach())
+
+        # policy loss (encourage actions aligned with reward)
+        entropy = -(probs * torch.log(probs + 1e-8)).sum(dim=1).mean()
+        policy_loss = -rewards.mean() - 0.01 * entropy
+
+        total_loss = value_loss + policy_loss
+
+        return total_loss, rewards.mean().item(), coop.item()
 
     def step(self):
         states = torch.randn(cfg.num_agents, cfg.state_dim)
 
-        hidden_states = []
-        actions = []
+        H, probs, values = self.forward(states)
 
-        for i, agent in enumerate(self.agents):
-            action, _, h = agent.act(states[i])
-            hidden_states.append(h)
-            actions.append(action)
+        loss, avg_reward, coop = self.compute_loss(states, H, probs, values)
 
-        H = torch.stack(hidden_states)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
-        # fully cooperative graph
-        adj = torch.ones(cfg.num_agents, cfg.num_agents) / cfg.num_agents
+        self.reward_history.append(avg_reward)
+        self.coop_history.append(coop)
+        self.loss_history.append(loss.item())
 
-        H_new = self.gnn(H, adj)
-
-        rewards = []
-        losses = []
-
-        for i, agent in enumerate(self.agents):
-            s = states[i]
-            r = self.compute_reward(s, H_new)
-            s2 = H_new[i].detach()
-
-            agent.memory.store((s, actions[i], r, s2))
-            loss = agent.learn()
-
-            rewards.append(r.item())
-            losses.append(loss)
-
-        # metrics
-        self.avg_rewards.append(sum(rewards) / len(rewards))
-        self.avg_losses.append(sum(losses) / len(losses))
-
-        # cooperation metric (alignment)
-        sim = torch.mean(torch.matmul(H_new, H_new.T)).item()
-        self.cooperation_scores.append(sim)
+        return avg_reward, coop, loss.item()
 
 # =========================
 # TRAIN + VISUALIZE
@@ -219,19 +174,23 @@ if __name__ == "__main__":
     system = MultiAgentSystem()
 
     for step in range(1000):
-        system.step()
+        reward, coop, loss = system.step()
 
         if step % 100 == 0:
-            print(f"Step {step} | Reward: {system.avg_rewards[-1]:.3f} | Coop: {system.cooperation_scores[-1]:.3f}")
+            print(f"Step {step} | Reward: {reward:.3f} | Coop: {coop:.3f} | Loss: {loss:.3f}")
 
     # Visualization
     plt.figure()
-    plt.plot(system.avg_rewards, label="Reward")
-    plt.plot(system.cooperation_scores, label="Cooperation")
-    plt.plot(system.avg_losses, label="Loss")
+    plt.plot(system.reward_history, label="Reward")
+    plt.plot(system.coop_history, label="Cooperation")
+    plt.plot(system.loss_history, label="Loss")
     plt.legend()
-    plt.title("Agent Intelligence Over Time")
+    plt.title("Emergent Cooperative Intelligence")
     plt.xlabel("Steps")
     plt.ylabel("Metrics")
     plt.show()
+
+# =========================
+# README.md
+# =========================
 
