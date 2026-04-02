@@ -107,5 +107,33 @@ Plots:
 ## Insight
 System evolves from random behavior → coordinated collective intelligence.
 """
+"""
+# Emergent Cooperative + Diverse Agentic AI
+
+## Key Fix
+Prevents BOTH:
+- Reward explosion
+- Mode collapse
+
+## Adds
+- Diversity penalty
+- Specialization reward
+- Balanced cooperation
+
+## Result
+Agents:
+- Cooperate
+- Specialize
+- Avoid uniform collapse
+
+## Insight
+True intelligence emerges when:
+cooperation + diversity coexist.
+
+## Run
+python main.py
+"""
+
+
 
 
