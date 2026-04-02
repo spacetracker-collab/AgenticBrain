@@ -1,22 +1,20 @@
 
 """
-# Task-Driven Emergent Multi-Agent Intelligence
+# Action-Driven Emergent Multi-Agent Intelligence
 
-## Key Additions
-- Structured environment
-- Symmetry breaking
-- Strong goal signal
-- Cooperative + diverse reward
+## Key Breakthrough
+Adds real environment interaction:
+state → action → next_state → reward
 
-## Result
-Agents:
-- Learn meaningful behavior
-- Specialize
-- Coordinate toward goal
+## What Emerges
+- Agents learn to ACT (not just represent)
+- Real reinforcement learning
+- True emergence
 
-## Insight
-True emergence requires:
-structure + pressure + diversity
+## Expected Behavior
+- Reward improves over time
+- Cooperation stabilizes below 1
+- System learns goal-directed movement
 
 ## Run
 python main.py
