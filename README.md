@@ -66,3 +66,46 @@ Agents evolve from random behavior → coordinated intelligence.
 """
 
 
+"""
+# Fully Differentiable Cooperative Agentic AI
+
+## Overview
+This project implements a fully differentiable multi-agent system with:
+- Shared gradient learning
+- Emergent communication protocol
+- Cooperative intelligence
+- GNN-based interaction
+
+## Architecture
+Agents share a global neural substrate:
+- Reasoning core (LLM-like)
+- Communication channel (learned language)
+- GNN interaction layer
+- Policy + value networks
+
+## Key Innovation
+Unlike independent agents, this system performs:
+- Joint backpropagation across all agents
+- Shared gradient updates
+- Emergent coordination
+
+## Communication
+Agents develop a latent communication protocol via:
+- Message encoding
+- Global aggregation
+- Broadcast decoding
+
+## Run
+python main.py
+
+## Output
+Plots:
+- Reward (goal alignment)
+- Cooperation (alignment score)
+- Loss (learning progress)
+
+## Insight
+System evolves from random behavior → coordinated collective intelligence.
+"""
+
+
