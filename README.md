@@ -1,139 +1,23 @@
-# AgenticBrain
-
-# =========================
-# README (PUT THIS INTO README.md)
-# =========================
 
 """
-# Agentic AI Neural System (GNN + RL + Meta-Learning)
+# Task-Driven Emergent Multi-Agent Intelligence
 
-## Overview
-This repository implements a full agentic AI system modeled as a neural organism.
-
-## Features
-- Meta-learning agents (self-updating)
-- Reinforcement learning decision loop
-- Multi-agent emergence
-- Graph Neural Network (GNN) communication
-- Episodic + semantic memory
-- LLM-like reasoning core
-
-## Architecture
-Input → Reasoning → Policy → Action → Environment → Reward → Learning
-
-## Run
-```bash
-python main.py
-```
-
-## Future Work
-- Real LLM integration
-- Tool APIs
-- UI agents
-- Distributed deployment
-"""
-
- =========================
-# README (PUT INTO README.md)
-# =========================
-
-"""
-# Goal-Driven Cooperative Agentic AI (GNN + RL + Meta-Learning)
-
-## Overview
-This system models a cooperative multi-agent neural organism.
-
-## Features
-- Shared goal optimization
-- Cooperative emergence (GNN-based)
-- Reinforcement learning
-- Meta-learning adaptation
-- Intelligence visualization
-
-## Intelligence Metrics
-- Reward (goal alignment)
-- Cooperation score (agent alignment)
-- Loss (learning progress)
-
-## Run
-python main.py
-
-## Output
-- Graph showing intelligence evolution
-
-## Insight
-Agents evolve from random behavior → coordinated intelligence.
-"""
-
-
-"""
-# Fully Differentiable Cooperative Agentic AI
-
-## Overview
-This project implements a fully differentiable multi-agent system with:
-- Shared gradient learning
-- Emergent communication protocol
-- Cooperative intelligence
-- GNN-based interaction
-
-## Architecture
-Agents share a global neural substrate:
-- Reasoning core (LLM-like)
-- Communication channel (learned language)
-- GNN interaction layer
-- Policy + value networks
-
-## Key Innovation
-Unlike independent agents, this system performs:
-- Joint backpropagation across all agents
-- Shared gradient updates
-- Emergent coordination
-
-## Communication
-Agents develop a latent communication protocol via:
-- Message encoding
-- Global aggregation
-- Broadcast decoding
-
-## Run
-python main.py
-
-## Output
-Plots:
-- Reward (goal alignment)
-- Cooperation (alignment score)
-- Loss (learning progress)
-
-## Insight
-System evolves from random behavior → coordinated collective intelligence.
-"""
-"""
-# Emergent Cooperative + Diverse Agentic AI
-
-## Key Fix
-Prevents BOTH:
-- Reward explosion
-- Mode collapse
-
-## Adds
-- Diversity penalty
-- Specialization reward
-- Balanced cooperation
+## Key Additions
+- Structured environment
+- Symmetry breaking
+- Strong goal signal
+- Cooperative + diverse reward
 
 ## Result
 Agents:
-- Cooperate
+- Learn meaningful behavior
 - Specialize
-- Avoid uniform collapse
+- Coordinate toward goal
 
 ## Insight
-True intelligence emerges when:
-cooperation + diversity coexist.
+True emergence requires:
+structure + pressure + diversity
 
 ## Run
 python main.py
 """
-
-
-
-
