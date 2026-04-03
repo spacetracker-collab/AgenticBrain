@@ -1,52 +1,12 @@
 
-""
-# Role-Emergent Multi-Agent Intelligence System
+# Agentic AI Brain: God-Brain V2
 
-## Final System Capabilities
+This implementation fixes the "Zero-Reward" issue by using a logarithmic Multi-Objective Loss function. 
 
-This system implements:
-- Action-driven learning (true RL loop)
-- Multi-agent cooperation
-- Agent specialization via local goals
-- Global coordination
-- Emergent role assignment (explorer / exploiter / coordinator)
-- Learned communication protocol
+## Key Fixes
+1. **Normalized Reward:** Uses a distance-based sigmoid rather than raw causal difference.
+2. **Log-Optimization:** Ensures that even if one metric (like Diversity) is low, it doesn't zero out the entire Intelligence Score.
+3. **Cooperation Function:** Measures the 'Consensus Accuracy' of the multi-agent hierarchy.
 
-## Architecture
-
-state → reasoning → communication → GNN → roles → action → environment → reward → learning
-
-## Key Innovations
-
-1. Dual objective:
-   - Local goals → specialization
-   - Global goal → cooperation
-
-2. Emergent roles:
-   - Agents learn functional differentiation
-
-3. Fully differentiable system:
-   - End-to-end gradient flow
-
-## Expected Behavior
-
-- Cooperation stabilizes below 1.0
-- Reward improves steadily
-- Agents take different roles
-- System exhibits coordinated intelligence
-
-## Run
-
-python main.py
-
-## Insight
-
-This system approximates a "digital organism":
-- Agents = cells
-- Communication = signaling
-- Roles = specialization
-- GNN = nervous system
-
-Emergence arises from:
-constraint + interaction + adaptation
-"""
+## Use Case
+Ideal for simulating an LLM orchestrating four distinct tools (SQL, FileSystem, WebSearch, API) to achieve a single task goal.
